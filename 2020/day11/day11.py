@@ -3,56 +3,56 @@ import copy
 x_max = 0
 y_max = 0
 
-def neighboursAbove(array , x ,y):
-    neighbours = 0
-    if y:
-        y0 = y-1
-        left_side = x-1 if x else 0
-        right_side = x+2 if x<=x_max else x_max
-        neighbours = "".join(array[y0]).count('#', left_side, right_side)
-    return neighbours
+def countOccupiedSeats(array):
+    occupied_seats = 0
+    for line in array:
+        occupied_seats += "".join(line).count('#')
+    return occupied_seats
 
-def neighboursBelow(array , x ,y):
-    neighbours = 0
-    if y < y_max:
-        y0 = y+1
-        left_side = x-1 if x else 0
-        right_side = x+2 if x<=x_max else x_max
-        neighbours = "".join(array[y0]).count('#', left_side, right_side)
-    return neighbours
+def nextSeatInDir(x_step, y_step, x, y, array, look_far):
+    if not (x_step or y_step):
+        return 0
+    x_new = x
+    y_new = y
+    while look_far:
+        x_new += x_step
+        y_new += y_step
+        if not (0 <= x_new <= x_max) or not (0 <= y_new <= y_max):
+            return 0
+        elif array[y_new][x_new] == '#':
+            return 1
+        elif array[y_new][x_new] == 'L':
+            return 0
+        if look_far > 0:
+            look_far -= 1
+    return 0
 
-def neighboursSides(array , x ,y):
-    neighbours = 0
-    if x:
-        if array[y][x-1] == '#':
-            neighbours += 1
-    if x < x_max:
-        if array[y][x+1] == '#':
-            neighbours += 1
-    return neighbours
+def newSeatState(array, x, y, look_far, max_nb):
+    x_dir = [-1, 0, 1]
+    y_dir = [-1, 0, 1]
 
-def countNeighbours(array , x ,y):
-    return neighboursAbove(array, x, y) + neighboursBelow(array, x, y) + neighboursSides(array, x, y)
-
-def newSeatState(array, x, y):
-    nb = countNeighbours(array, x, y)
     current_state = array[y][x]
-    if not nb:
+    neighbours = 0
+    for y_step in y_dir:
+        for x_step in x_dir:
+            neighbours += nextSeatInDir(x_step, y_step, x, y, array, look_far)
+
+    if not neighbours:
         if current_state != '#':
             return True, '#'
-    elif nb > 3:
+    elif neighbours >= max_nb:
         if current_state != 'L':
             return True, 'L'
     return False, current_state
     
-def doIteration(array):
+def doIteration(array, look_far, max_nb):
     new_array = copy.deepcopy(array)
     changes = False
     for y, row in enumerate(array):
         x = 0
         while x <= x_max:
             if array[y][x] != '.':
-                change, state = newSeatState(array, x, y)
+                change, state = newSeatState(array, x, y, look_far, max_nb)
                 if change:
                     changes = True
                     seats = new_array[y]
@@ -61,25 +61,28 @@ def doIteration(array):
             x += 1
     return changes, new_array
 
+def runShow(array, look_far, max_nb):
+    iterations = 0
+    array_change = True
+    while array_change:
+        iterations += 1
+        array_change, array = doIteration(array, look_far, max_nb)
+    return iterations, array
+
 with open ('day11/input.txt', 'r') as file:
     input_data = [list(line.strip().replace('L', '#')) for line in file]
 
 x_max = len(input_data[0])-1
 y_max = len(input_data)-1
 
-iterations = 0
+first_iter, first_array = runShow(input_data, 1, 4)
 
-array_change = True
+print('Number of iterations in part 1:', first_iter)
+print('Number of occupied seats in part 1:', countOccupiedSeats(first_array))
 
-another_copy = copy.deepcopy(input_data)
-while array_change:
-    iterations += 1
-    array_change, another_copy = doIteration(another_copy)
+second_iter, second_copy = runShow(input_data, -1, 5)
 
-occupied_seats = 0
-for line in another_copy:
-    occupied_seats += "".join(line).count('#')
+print('Number of iterations in part 2:', second_iter)
+print('Number of occupied seats in part 2:', countOccupiedSeats(second_copy))
 
-print('Number of iterations:', iterations)
-print('Number of occupied seats:', occupied_seats)
 print('Done with day 11!')
